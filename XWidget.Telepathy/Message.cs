@@ -17,7 +17,7 @@ namespace XWidget.Telepathy {
         /// <summary>
         /// 路徑限制
         /// </summary>
-        public uint TTL { get; set; }
+        public uint TTL { get; set; } = 64;
 
         /// <summary>
         /// 傳遞資料

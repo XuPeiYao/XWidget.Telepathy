@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace XWidget.Telepathy {
     public class RouterHub<T> : Hub {
         public static Guid Id { get; set; } = Guid.NewGuid();
-        public static uint TTL { get; set; } = 64;
+
         public static Dictionary<Guid, IClientProxy> RouterClient { get; private set; } = new Dictionary<Guid, IClientProxy>();
 
         #region 連線事件
