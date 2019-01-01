@@ -9,7 +9,15 @@ namespace XWidget.Telepathy {
     public class RouterHub<T> : Hub {
         public static Guid Id { get; set; } = Guid.NewGuid();
 
-        public static Dictionary<Guid, IClientProxy> RouterClient { get; private set; } = new Dictionary<Guid, IClientProxy>();
+        /// <summary>
+        /// Router客戶端
+        /// </summary>
+        public static Dictionary<Guid, IClientProxy> RouterClients { get; private set; } = new Dictionary<Guid, IClientProxy>();
+
+        /// <summary>
+        /// 拓譜
+        /// </summary>
+        public static Dictionary<Guid, Guid[]> Topologies { get; set; } = new Dictionary<Guid, Guid[]>();
 
         #region 連線事件
         public override Task OnConnectedAsync() {
@@ -17,31 +25,47 @@ namespace XWidget.Telepathy {
         }
 
         public override Task OnDisconnectedAsync(Exception exception) {
-            var serverId = RouterClient.FirstOrDefault(x => x.Value == Clients.Caller).Key;
-            RouterClient.Remove(serverId);
+            var serverId = RouterClients.FirstOrDefault(x => x.Value == Clients.Caller).Key;
+            if (RouterClients.ContainsKey(serverId)) {
+                RouterClients.Remove(serverId);
+            }
+            if (Topologies.ContainsKey(serverId)) {
+                Topologies.Remove(serverId);
+            }
 
             return base.OnDisconnectedAsync(exception);
         }
         #endregion
 
         #region 提供客端調用
+        /// <summary>
+        /// 連線調用
+        /// </summary>
+        /// <param name="serverId">客端唯一識別號</param>
+        /// <returns></returns>
         public async Task Connect(Guid serverId) {
-            RouterClient[serverId] = Clients.Caller;
+            RouterClients[serverId] = Clients.Caller;
             await Clients.Caller.SendAsync("ConnectCallback", RouterHub<T>.Id);
         }
 
+        // 無作用
         public async Task ConnectCallback(Guid serverId) {
             throw new NotSupportedException();
         }
 
+
+        public async Task Topology(Guid sourceId) {
+
+        }
+
         public async Task Broadcast(Message<T> message) {
-            // 曾經送過自己
+            // 曾經送過自己，拋棄包
             if (message.Path.Contains(RouterHub<T>.Id)) {
                 return;
             }
 
             // 路徑加入自己
-            message.Path.Add(RouterClient.SingleOrDefault(x => x.Value == Clients.Caller).Key);
+            message.Path.Add(RouterClients.SingleOrDefault(x => x.Value == Clients.Caller).Key);
 
             #region 廣播後處理程序
             OnRawOnReceiveBroadcast?.Invoke(this, message);
@@ -54,7 +78,7 @@ namespace XWidget.Telepathy {
             // TTL大於0者繼續廣播
             if (message.TTL > 0) {
                 // 取得本節點連接項目尚未送者
-                var targets = RouterClient.Select(x => x.Key).Except(message.Sends).ToArray();
+                var targets = RouterClients.Select(x => x.Key).Except(message.Sends).ToArray();
 
                 // 加入自身
                 message.Sends.Add(RouterHub<T>.Id);
@@ -64,7 +88,7 @@ namespace XWidget.Telepathy {
 
                 // 廣播
                 Parallel.ForEach(targets, async client => {
-                    await RouterClient[client].SendAsync("Broadcast", message);
+                    await RouterClients[client].SendAsync("Broadcast", message);
                 });
             }
         }
@@ -83,15 +107,15 @@ namespace XWidget.Telepathy {
             }
 
             // 取得本節點連接項目尚未送者
-            var targets = RouterClient.Select(x => x.Key).Except(message.Sends).ToArray();
+            var targets = RouterClients.Select(x => x.Key).Except(message.Sends).ToArray();
 
             // 加入即將送出項目
             message.Sends.AddRange(targets);
 
             // 廣播
-            foreach (var client in targets) {
-                await RouterClient[client].SendAsync("Broadcast", message);
-            };
+            Parallel.ForEach(targets, async (client) => {
+                await RouterClients[client].SendAsync("Broadcast", message);
+            });
         }
 
         /// <summary>
@@ -108,6 +132,14 @@ namespace XWidget.Telepathy {
             message.Sends.Add(RouterHub<T>.Id);
 
             await RawBroadcast(message, ignoreSelf);
+        }
+
+        public static async Task RawSend(Guid serverId, Message<T> message, bool ignoreSelf = true) {
+
+        }
+
+        public static async Task Send(Guid serverId, T data, bool ignoreSelf = true) {
+
         }
 
         /// <summary>

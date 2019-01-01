@@ -28,9 +28,24 @@ namespace XWidget.Telepathy {
                         RouterHub<T>.FireOnReceiveBroadcast(data);
                     });
 
+                    // 設定掛勾，當收到拓譜查詢時調用事件
+                    connection.On<Guid>("TopologyQuery", (Guid sourceId) => {
+                        connection.SendAsync(
+                            "Topology",
+                            new TopologyQueryResult() {
+                                Source = RouterHub<T>.Id,
+                                Connections = RouterHub<T>.RouterClients.Keys.ToArray()
+                            });
+                    });
+
+                    // 設定掛勾，當收到拓譜查詢結果時調用事件
+                    connection.On<TopologyQueryResult>("Topology", (TopologyQueryResult queryResult) => {
+                        RouterHub<T>.Topologies[queryResult.Source] = queryResult.Connections;
+                    });
+
                     // 當遠端註冊 Client 後回呼客端方法
                     connection.On<Guid>("ConnectCallback", (Guid serverId) => {
-                        RouterHub<T>.RouterClient[serverId] = new FakeClient() {
+                        RouterHub<T>.RouterClients[serverId] = new FakeClient() {
                             Client = connection
                         };
                         InternalClientMapping[serverId] = connection;
@@ -39,7 +54,12 @@ namespace XWidget.Telepathy {
                     // 連線中斷
                     connection.Closed += async (Exception e) => {
                         var serverId = InternalClientMapping.First(x => x.Value == connection).Key;
-                        RouterHub<T>.RouterClient.Remove(serverId);
+                        if (RouterHub<T>.RouterClients.ContainsKey(serverId)) {
+                            RouterHub<T>.RouterClients.Remove(serverId);
+                        }
+                        if (RouterHub<T>.Topologies.ContainsKey(serverId)) {
+                            RouterHub<T>.Topologies.Remove(serverId);
+                        }
                     };
 
                     // 調用遠端 Connect 方法註冊本地ID
