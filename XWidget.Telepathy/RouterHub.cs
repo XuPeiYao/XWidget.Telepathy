@@ -24,6 +24,7 @@ namespace XWidget.Telepathy {
         }
         #endregion
 
+        #region 提供客端調用
         public async Task Connect(Guid serverId) {
             RouterClient[serverId] = Clients.Caller;
             await Clients.Caller.SendAsync("ConnectCallback", RouterHub<T>.Id);
@@ -43,6 +44,7 @@ namespace XWidget.Telepathy {
             message.Path.Add(RouterClient.SingleOrDefault(x => x.Value == Clients.Caller).Key);
 
             #region 廣播後處理程序
+            OnRawOnReceiveBroadcast?.Invoke(this, message);
             OnReceiveBroadcast?.Invoke(this, message.Data);
             #endregion
 
@@ -66,16 +68,19 @@ namespace XWidget.Telepathy {
                 });
             }
         }
+        #endregion
 
-        public static async Task Broadcast(T data) {
-            var message = new Message<T>() {
-                Data = data,
-                TTL = RouterHub<T>.TTL
-            };
-            message.Path.Add(RouterHub<T>.Id);
-            message.Sends.Add(RouterHub<T>.Id);
-
-            OnReceiveBroadcast?.Invoke(null, message.Data);
+        /// <summary>
+        /// 發佈廣播
+        /// </summary>
+        /// <param name="message">訊息包</param>
+        /// <param name="ignoreSelf">是否忽略引動發信者自身事件，預設忽略</param>
+        /// <returns></returns>
+        public static async Task RawBroadcast(Message<T> message, bool ignoreSelf = false) {
+            if (!ignoreSelf) {
+                OnRawOnReceiveBroadcast?.Invoke(null, message);
+                OnReceiveBroadcast?.Invoke(null, message.Data);
+            }
 
             // 取得本節點連接項目尚未送者
             var targets = RouterClient.Select(x => x.Key).Except(message.Sends).ToArray();
@@ -89,10 +94,38 @@ namespace XWidget.Telepathy {
             };
         }
 
+        /// <summary>
+        /// 發佈廣播
+        /// </summary>
+        /// <param name="data">訊息內容</param>
+        /// <param name="ignoreSelf">是否忽略引動發信者自身事件，預設忽略</param>
+        /// <returns></returns>
+        public static async Task Broadcast(T data, bool ignoreSelf = true) {
+            var message = new Message<T>() {
+                Data = data
+            };
+            message.Path.Add(RouterHub<T>.Id);
+            message.Sends.Add(RouterHub<T>.Id);
+
+            await RawBroadcast(message, ignoreSelf);
+        }
+
+        /// <summary>
+        /// 當接收到原始廣播訊息包
+        /// </summary>
+        public static event EventHandler<Message<T>> OnRawOnReceiveBroadcast;
+
+        /// <summary>
+        /// 當街收到廣播訊息
+        /// </summary>
         public static event EventHandler<T> OnReceiveBroadcast;
 
-
+        /// <summary>
+        /// 發動事件
+        /// </summary>
+        /// <param name="message">訊息包</param>
         internal static void FireOnReceiveBroadcast(Message<T> message) {
+            OnRawOnReceiveBroadcast?.Invoke(null, message);
             OnReceiveBroadcast?.Invoke(null, message.Data);
         }
     }
