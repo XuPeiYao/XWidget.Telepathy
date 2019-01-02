@@ -33,6 +33,8 @@ namespace XWidget.Telepathy {
             return Guid.Parse(Context.GetHttpContext().Request.Query["serverId"]);
         }
 
+
+
         /// <summary>
         /// 取得轉送節點
         /// </summary>
@@ -87,13 +89,16 @@ namespace XWidget.Telepathy {
             if (RouterClients.ContainsKey(serverId)) {
                 RouterClients.Remove(serverId);
             }
+            if (Topography.ContainsKey(serverId)) {
+                Topography.Remove(serverId);
+            }
 
             return base.OnDisconnectedAsync(exception);
         }
         #endregion
 
         #region 提供遠端調用
-        internal async Task GenericReceiveProcess<T>(Package<T> package, string method, Action<Package<T>> process) {
+        internal static async Task GenericReceiveProcess<T>(Package<T> package, string method, Action<Package<T>> process) {
             // 訊息包路徑更新
             package.Path = package.Path.Concat(new Guid[] { RouterHub<TPayload>.Id }).ToArray();
 
@@ -200,9 +205,13 @@ namespace XWidget.Telepathy {
             }
         }
 
+        internal static void FireOnReceive(Package<TPayload> data) {
+            OnReceive?.Invoke(null, data);
+        }
+
         /// <summary>
         /// 當接收到給于本節點的訊息包事件
         /// </summary>
-        public event EventHandler<Package<TPayload>> OnReceive;
+        public static event EventHandler<Package<TPayload>> OnReceive;
     }
 }
