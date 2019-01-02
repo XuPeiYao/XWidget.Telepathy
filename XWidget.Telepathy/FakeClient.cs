@@ -7,10 +7,15 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace XWidget.Telepathy {
-    public class FakeClient : IClientProxy {
-        public HubConnection Client { get; set; }
+    internal class FakeClient : IClientProxy {
+        public HubConnection Connection { get; private set; }
+
+        public FakeClient(HubConnection connection) {
+            this.Connection = connection;
+        }
+
         public Task SendCoreAsync(string method, object[] args, CancellationToken cancellationToken = default(CancellationToken)) {
-            return Client.SendCoreAsync(method, args, cancellationToken);
+            return Connection.SendCoreAsync(method, args, cancellationToken);
         }
     }
 }
