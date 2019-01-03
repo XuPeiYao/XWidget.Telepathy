@@ -76,6 +76,8 @@ namespace XWidget.Telepathy {
 
             RouterClients[serverId] = Clients.Caller;
 
+            SendTopographyUpdate();
+
             return base.OnConnectedAsync();
         }
 
@@ -93,6 +95,8 @@ namespace XWidget.Telepathy {
             if (Topography.ContainsKey(serverId)) {
                 Topography.Remove(serverId);
             }
+
+            SendTopographyUpdate();
 
             return base.OnDisconnectedAsync(exception);
         }
@@ -223,32 +227,35 @@ namespace XWidget.Telepathy {
             TopographyUpdateLoop = Task.Run(() => {
                 for (; ; ) {
                     Thread.Sleep(1000 * 10);
-
-                    try {
-                        var package = new Package<TopographyInfo>() {
-                            Source = RouterHub<TPayload>.Id,
-                            Path = new Guid[] { RouterHub<TPayload>.Id },
-                            Sent = new Guid[] { RouterHub<TPayload>.Id },
-                            Payload = new TopographyInfo() {
-                                Source = RouterHub<TPayload>.Id,
-                                Targets = RouterClients.Keys.ToArray()
-                            }
-                        };
-
-
-                        // 取得本節點要進行廣播的目標
-                        var willSend = RouterClients.Keys.ToArray();
-
-                        // 將要進行廣播的項目作為已經送出的目標，防止目標持續轉送重複節點
-                        package.Sent = package.Sent.Concat(willSend).ToArray();
-
-                        // 廣播
-                        Parallel.ForEach(willSend, async clientId => {
-                            await RouterClients[clientId].SendAsync("TopographyUpdate", package);
-                        });
-                    } catch { }
+                    SendTopographyUpdate();
                 }
             });
+        }
+
+        internal static void SendTopographyUpdate() {
+            try {
+                var package = new Package<TopographyInfo>() {
+                    Source = RouterHub<TPayload>.Id,
+                    Path = new Guid[] { RouterHub<TPayload>.Id },
+                    Sent = new Guid[] { RouterHub<TPayload>.Id },
+                    Payload = new TopographyInfo() {
+                        Source = RouterHub<TPayload>.Id,
+                        Targets = RouterClients.Keys.ToArray()
+                    }
+                };
+
+
+                // 取得本節點要進行廣播的目標
+                var willSend = RouterClients.Keys.ToArray();
+
+                // 將要進行廣播的項目作為已經送出的目標，防止目標持續轉送重複節點
+                package.Sent = package.Sent.Concat(willSend).ToArray();
+
+                // 廣播
+                Parallel.ForEach(willSend, async clientId => {
+                    await RouterClients[clientId].SendAsync("TopographyUpdate", package);
+                });
+            } catch { }
         }
     }
 }

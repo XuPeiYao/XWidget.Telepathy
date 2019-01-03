@@ -39,6 +39,8 @@ namespace XWidget.Telepathy {
                     connection.StartAsync().GetAwaiter().GetResult();
 
                     RouterHub<TPayload>.RouterClients[serverId] = new FakeClient(connection);
+
+                    RouterHub<TPayload>.SendTopographyUpdate();
                 } catch { }
             }
 
