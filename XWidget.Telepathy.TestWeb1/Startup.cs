@@ -16,8 +16,8 @@ namespace XWidget.Telepathy.TestWeb1 {
             Thread.Sleep(1000 * 2);
             services.AddSignalR();
             services.AddTelepathy<string>("http://localhost:5001");
-            RouterHub<string>.OnReceiveBroadcast += (object sender, string e) => {
-                Console.WriteLine(e);
+            RouterHub<string>.OnReceive += (object sender, Package<string> e) => {
+                Console.WriteLine(e.Payload);
             };
         }
 
@@ -31,7 +31,15 @@ namespace XWidget.Telepathy.TestWeb1 {
 
             app.Use(async (context, next) => {
                 if (context.Request.Path == "/test") {
-                    await RouterHub<string>.Broadcast("TEST MESSAGE! FROM WEB1");
+                    await RouterHub<string>.SendAsync(new Package<string>() {
+                        Payload = "TEST MESSAGE! FROM WEB1"
+                    });
+                }
+                if (context.Request.Path == "/test2") {
+                    await RouterHub<string>.SendAsync(new Package<string>() {
+                        Target = RouterHub<string>.RouterClients.Keys.First(),
+                        Payload = "TEST MESSAGE! FROM WEB1"
+                    });
                 }
             });
         }

@@ -3,67 +3,44 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Net.Http;
 using System.Text;
 
 namespace XWidget.Telepathy {
     public static class MiddlewareExtension {
-        private static Dictionary<Guid, HubConnection> InternalClientMapping = new Dictionary<Guid, HubConnection>();
-
-        public static IServiceCollection AddTelepathy<T>(
+        public static IServiceCollection AddTelepathy<TPayload>(
             this IServiceCollection serviceCollection,
             params string[] serverList) {
+            // 啟動拓譜更新迴圈
+            RouterHub<TPayload>.StartTopographyUpdateLoop();
+
             // 本節點作為其他節點的Client
             foreach (var server in serverList) {
                 // 建立連線
                 var connection = new HubConnectionBuilder()
-                    .WithUrl($"{server}/telepathy")
+                    .WithUrl($"{server}/telepathy?serverId={RouterHub<TPayload>.Id}")
                     .Build();
+
                 try {
+                    var serverId = Guid.Parse(new HttpClient().GetStringAsync($"{server}/telepathy/id").GetAwaiter().GetResult());
+
+                    var virtualRouter = new RouterHub<TPayload>();
+
+                    // 設定掛勾，當收到Receive時調用事件
+                    connection.On<Package<TPayload>>("Receive", async (Package<TPayload> package) => await virtualRouter.Receive(package));
+
+                    // 設定掛勾，當收到TopographyUpdate時調用事件
+                    connection.On<Package<TopographyInfo>>("TopographyUpdate", async (Package<TopographyInfo> package) => await virtualRouter.TopographyUpdate(package));
+
+                    // 連線中斷
+                    connection.Closed += async (Exception e) => await virtualRouter.OnDisconnectedAsync(e);
+
                     // 啟動客戶端
                     connection.StartAsync().GetAwaiter().GetResult();
 
-                    // 設定掛勾，當收到廣播時調用事件
-                    connection.On<Message<T>>("Broadcast", (Message<T> data) => {
-                        RouterHub<T>.FireOnReceiveBroadcast(data);
-                    });
+                    RouterHub<TPayload>.RouterClients[serverId] = new FakeClient(connection);
 
-                    // 設定掛勾，當收到拓譜查詢時調用事件
-                    connection.On<Guid>("TopologyQuery", (Guid sourceId) => {
-                        connection.SendAsync(
-                            "Topology",
-                            new TopologyQueryResult() {
-                                Source = RouterHub<T>.Id,
-                                Connections = RouterHub<T>.RouterClients.Keys.ToArray()
-                            });
-                    });
-
-                    // 設定掛勾，當收到拓譜查詢結果時調用事件
-                    connection.On<TopologyQueryResult>("Topology", (TopologyQueryResult queryResult) => {
-                        RouterHub<T>.Topologies[queryResult.Source] = queryResult.Connections;
-                    });
-
-                    // 當遠端註冊 Client 後回呼客端方法
-                    connection.On<Guid>("ConnectCallback", (Guid serverId) => {
-                        RouterHub<T>.RouterClients[serverId] = new FakeClient() {
-                            Client = connection
-                        };
-                        InternalClientMapping[serverId] = connection;
-                    });
-
-                    // 連線中斷
-                    connection.Closed += async (Exception e) => {
-                        var serverId = InternalClientMapping.First(x => x.Value == connection).Key;
-                        if (RouterHub<T>.RouterClients.ContainsKey(serverId)) {
-                            RouterHub<T>.RouterClients.Remove(serverId);
-                        }
-                        if (RouterHub<T>.Topologies.ContainsKey(serverId)) {
-                            RouterHub<T>.Topologies.Remove(serverId);
-                        }
-                    };
-
-                    // 調用遠端 Connect 方法註冊本地ID
-                    connection.SendAsync("Connect", RouterHub<T>.Id);
+                    RouterHub<TPayload>.SendTopographyUpdate();
                 } catch { }
             }
 
@@ -78,6 +55,15 @@ namespace XWidget.Telepathy {
         /// <returns></returns>
         public static IApplicationBuilder UseTelepathy<T>(
             this IApplicationBuilder app) {
+            app.Use(async (context, next) => {
+                if (context.Request.Path == "/telepathy/id") {
+                    context.Response.ContentType = "text/plain";
+                    var binaryId = Encoding.UTF8.GetBytes(RouterHub<T>.Id.ToString());
+                    context.Response.Body.Write(binaryId, 0, binaryId.Length);
+                    return;
+                }
+                await next();
+            });
             return app.UseSignalR(config => {
                 config.MapHub<RouterHub<T>>("/telepathy");
             });

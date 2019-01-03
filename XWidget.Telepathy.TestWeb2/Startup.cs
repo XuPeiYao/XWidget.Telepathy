@@ -14,8 +14,8 @@ namespace XWidget.Telepathy.TestWeb2 {
         public void ConfigureServices(IServiceCollection services) {
             services.AddSignalR();
             services.AddTelepathy<string>("http://localhost:5000");
-            RouterHub<string>.OnReceiveBroadcast += (object sender, string e) => {
-                Console.WriteLine(e);
+            RouterHub<string>.OnReceive += (object sender, Package<string> e) => {
+                Console.WriteLine(e.Payload);
             };
         }
 
@@ -29,7 +29,15 @@ namespace XWidget.Telepathy.TestWeb2 {
 
             app.Use(async (context, next) => {
                 if (context.Request.Path == "/test") {
-                    await RouterHub<string>.Broadcast("TEST MESSAGE! FROM WEB2");
+                    await RouterHub<string>.SendAsync(new Package<string>() {
+                        Payload = "TEST MESSAGE! FROM WEB2"
+                    });
+                }
+                if (context.Request.Path == "/test2") {
+                    await RouterHub<string>.SendAsync(new Package<string>() {
+                        Target = RouterHub<string>.RouterClients.Keys.First(),
+                        Payload = "TEST MESSAGE! FROM WEB2"
+                    });
                 }
             });
         }
