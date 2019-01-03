@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace XWidget.Telepathy {
@@ -10,6 +11,8 @@ namespace XWidget.Telepathy {
     /// 路由
     /// </summary>
     public class RouterHub<TPayload> : Hub {
+        public static Task TopographyUpdateLoop { get; set; }
+
         /// <summary>
         /// 路由唯一識別號
         /// </summary>
@@ -32,8 +35,6 @@ namespace XWidget.Telepathy {
         public Guid GetCurrentServerId() {
             return Guid.Parse(Context.GetHttpContext().Request.Query["serverId"]);
         }
-
-
 
         /// <summary>
         /// 取得轉送節點
@@ -161,9 +162,9 @@ namespace XWidget.Telepathy {
         /// </summary>
         /// <param name="package">拓補訊息包</param>
         /// <returns></returns>
-        public async Task TopographyUpdate(Package<KeyValuePair<Guid, Guid[]>> package) {
+        public async Task TopographyUpdate(Package<TopographyInfo> package) {
             await GenericReceiveProcess(package, "TopographyUpdate", p => {
-                Topography[package.Payload.Key] = package.Payload.Value;
+                Topography[package.Payload.Source] = package.Payload.Targets;
             });
         }
         #endregion
@@ -173,10 +174,16 @@ namespace XWidget.Telepathy {
         /// </summary>
         /// <param name="package">訊息包</param>
         /// <returns></returns>
-        public async Task SendAsync(Package<TPayload> package) {
+        public static async Task SendAsync(Package<TPayload> package) {
+            package.Source = RouterHub<TPayload>.Id;
+            package.Path = new Guid[] { package.Source };
+            package.Sent = new Guid[] { package.Source };
+
             // 自我循環測試，直接調用本地方法
             if (package.Target == RouterHub<TPayload>.Id) {
-                await Receive(package);
+                await GenericReceiveProcess(package, "Receive", p => {
+                    OnReceive?.Invoke(null, p);
+                });
                 return;
             }
 
@@ -187,6 +194,8 @@ namespace XWidget.Telepathy {
 
                 // 將要進行廣播的項目作為已經送出的目標，防止目標持續轉送重複節點
                 package.Sent = package.Sent.Concat(willSend).ToArray();
+
+                OnReceive?.Invoke(null, package);
 
                 // 廣播
                 Parallel.ForEach(willSend, async clientId => {
@@ -205,13 +214,41 @@ namespace XWidget.Telepathy {
             }
         }
 
-        internal static void FireOnReceive(Package<TPayload> data) {
-            OnReceive?.Invoke(null, data);
-        }
-
         /// <summary>
         /// 當接收到給于本節點的訊息包事件
         /// </summary>
         public static event EventHandler<Package<TPayload>> OnReceive;
+
+        internal static void StartTopographyUpdateLoop() {
+            TopographyUpdateLoop = Task.Run(() => {
+                for (; ; ) {
+                    Thread.Sleep(1000 * 10);
+
+                    try {
+                        var package = new Package<TopographyInfo>() {
+                            Source = RouterHub<TPayload>.Id,
+                            Path = new Guid[] { RouterHub<TPayload>.Id },
+                            Sent = new Guid[] { RouterHub<TPayload>.Id },
+                            Payload = new TopographyInfo() {
+                                Source = RouterHub<TPayload>.Id,
+                                Targets = RouterClients.Keys.ToArray()
+                            }
+                        };
+
+
+                        // 取得本節點要進行廣播的目標
+                        var willSend = RouterClients.Keys.ToArray();
+
+                        // 將要進行廣播的項目作為已經送出的目標，防止目標持續轉送重複節點
+                        package.Sent = package.Sent.Concat(willSend).ToArray();
+
+                        // 廣播
+                        Parallel.ForEach(willSend, async clientId => {
+                            await RouterClients[clientId].SendAsync("TopographyUpdate", package);
+                        });
+                    } catch { }
+                }
+            });
+        }
     }
 }

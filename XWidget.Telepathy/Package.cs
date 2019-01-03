@@ -6,7 +6,7 @@ namespace XWidget.Telepathy {
     /// <summary>
     /// 訊息包
     /// </summary>
-    public class Package {
+    public class Package<TPayload> {
         /// <summary>
         /// 來源
         /// </summary>
@@ -35,6 +35,6 @@ namespace XWidget.Telepathy {
         /// <summary>
         /// 附載
         /// </summary>
-        public object Payload { get; set; }
+        public TPayload Payload { get; set; }
     }
 }
