@@ -5,11 +5,13 @@ VisualStudioVersion = 15.0.27703.2042
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XWidget.Telepathy", "XWidget.Telepathy\XWidget.Telepathy.csproj", "{C5724B04-4EED-4753-AC81-A2278C2B4642}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XWidget.Telepathy.Test", "XWidget.Telepathy.Test\XWidget.Telepathy.Test.csproj", "{FB87B888-0B86-43E7-B0F2-10E393921349}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XWidget.Telepathy.Test", "XWidget.Telepathy.Test\XWidget.Telepathy.Test.csproj", "{FB87B888-0B86-43E7-B0F2-10E393921349}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XWidget.Telepathy.TestWeb1", "XWidget.Telepathy.TestWeb1\XWidget.Telepathy.TestWeb1.csproj", "{363A41D8-C89F-40B0-A6CC-539C02C9675B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XWidget.Telepathy.TestWeb1", "XWidget.Telepathy.TestWeb1\XWidget.Telepathy.TestWeb1.csproj", "{363A41D8-C89F-40B0-A6CC-539C02C9675B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XWidget.Telepathy.TestWeb2", "XWidget.Telepathy.TestWeb2\XWidget.Telepathy.TestWeb2.csproj", "{98F72C7B-6E4F-4DD0-B21A-54D2CD74D42B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XWidget.Telepathy.TestWeb2", "XWidget.Telepathy.TestWeb2\XWidget.Telepathy.TestWeb2.csproj", "{98F72C7B-6E4F-4DD0-B21A-54D2CD74D42B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XWidget.Telepathy.TestWeb3", "XWidget.Telepathy.TestWeb3\XWidget.Telepathy.TestWeb3.csproj", "{B01AA43B-C5E9-49C6-B8E0-90483F4AB235}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{98F72C7B-6E4F-4DD0-B21A-54D2CD74D42B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98F72C7B-6E4F-4DD0-B21A-54D2CD74D42B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{98F72C7B-6E4F-4DD0-B21A-54D2CD74D42B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B01AA43B-C5E9-49C6-B8E0-90483F4AB235}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B01AA43B-C5E9-49C6-B8E0-90483F4AB235}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B01AA43B-C5E9-49C6-B8E0-90483F4AB235}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B01AA43B-C5E9-49C6-B8E0-90483F4AB235}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

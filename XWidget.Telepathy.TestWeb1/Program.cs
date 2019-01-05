@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace XWidget.Telepathy.TestWeb1 {
     public class Program {
         public static void Main(string[] args) {
+            Console.Title = "WEB1: 分支節點";
             CreateWebHostBuilder(args).Build().Run();
         }
 

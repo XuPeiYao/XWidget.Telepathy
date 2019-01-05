@@ -16,7 +16,7 @@ namespace XWidget.Telepathy {
         /// <summary>
         /// 路由唯一識別號
         /// </summary>
-        public static Guid Id { get; private set; } = Guid.NewGuid();
+        public static Guid Id { get; set; } = Guid.NewGuid();
 
         /// <summary>
         /// 路由客戶端
@@ -27,6 +27,7 @@ namespace XWidget.Telepathy {
         /// 拓譜
         /// </summary>
         public static Dictionary<Guid, Guid[]> Topography { get; private set; } = new Dictionary<Guid, Guid[]>();
+
 
         /// <summary>
         /// 取得目前連線的客戶端唯一識別號
@@ -42,7 +43,7 @@ namespace XWidget.Telepathy {
         /// <param name="target">最終目標節點</param>
         /// <returns>轉送節點</returns>
         public static Guid? GetSendTarget(Guid target, uint ttl, out uint lastTTL) {
-            if (Topography.ContainsKey(target)) {
+            if (RouterClients.ContainsKey(target)) {
                 lastTTL = ttl - 1;
                 return target;
             }
@@ -72,13 +73,15 @@ namespace XWidget.Telepathy {
         /// </summary>
         /// <returns></returns>
         public override Task OnConnectedAsync() {
-            var serverId = GetCurrentServerId();
+            lock (RouterClients) {
+                var serverId = GetCurrentServerId();
 
-            RouterClients[serverId] = Clients.Caller;
+                RouterClients[serverId] = Clients.Caller;
 
-            SendTopographyUpdate();
+                SendTopographyUpdate();
 
-            return base.OnConnectedAsync();
+                return base.OnConnectedAsync();
+            }
         }
 
         /// <summary>
@@ -89,16 +92,22 @@ namespace XWidget.Telepathy {
         public override Task OnDisconnectedAsync(Exception exception) {
             var serverId = GetCurrentServerId();
 
-            if (RouterClients.ContainsKey(serverId)) {
-                RouterClients.Remove(serverId);
+            lock (RouterClients) {
+                if (RouterClients.ContainsKey(serverId)) {
+                    RouterClients.Remove(serverId);
+                }
             }
-            if (Topography.ContainsKey(serverId)) {
-                Topography.Remove(serverId);
+
+            lock (Topography) {
+                if (Topography.ContainsKey(serverId)) {
+                    Topography.Remove(serverId);
+                }
             }
 
             SendTopographyUpdate();
 
             return base.OnDisconnectedAsync(exception);
+
         }
         #endregion
 
@@ -168,7 +177,9 @@ namespace XWidget.Telepathy {
         /// <returns></returns>
         public async Task TopographyUpdate(Package<TopographyInfo> package) {
             await GenericReceiveProcess(package, "TopographyUpdate", p => {
-                Topography[package.Payload.Source] = package.Payload.Targets;
+                lock (Topography) {
+                    Topography[package.Payload.Source] = package.Payload.Targets;
+                }
             });
         }
         #endregion

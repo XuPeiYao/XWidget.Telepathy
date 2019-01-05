@@ -8,12 +8,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace XWidget.Telepathy.TestWeb1 {
+namespace XWidget.Telepathy.TestWeb3 {
     public class Startup {
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services) {
-            RouterHub<string>.Id = Guid.Parse("00000000-0000-0000-0000-000000000001");
+            RouterHub<string>.Id = Guid.Parse("00000000-0000-0000-0000-000000000003");
 
             Thread.Sleep(1000 * 2);
             services.AddSignalR();
@@ -34,21 +34,21 @@ namespace XWidget.Telepathy.TestWeb1 {
             app.Use(async (context, next) => {
                 if (context.Request.Path == "/test") {
                     await RouterHub<string>.SendAsync(new Package<string>() {
-                        Payload = "WEB1的廣播"
+                        Payload = "WEB3的廣播"
                     });
                 }
                 if (context.Request.Path == "/test2") {
                     Console.WriteLine("送出訊息給WEB2");
                     await RouterHub<string>.SendAsync(new Package<string>() {
                         Target = Guid.Parse("00000000-0000-0000-0000-000000000002"),
-                        Payload = "WEB1 TO WEB2"
+                        Payload = "WEB3 TO WEB2"
                     });
                 }
                 if (context.Request.Path == "/test3") {
-                    Console.WriteLine("送出訊息給WEB3");
+                    Console.WriteLine("送出訊息給WEB1");
                     await RouterHub<string>.SendAsync(new Package<string>() {
-                        Target = Guid.Parse("00000000-0000-0000-0000-000000000003"),
-                        Payload = "WEB1 TO WEB3"
+                        Target = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                        Payload = "WEB3 TO WEB1"
                     });
                 }
             });

@@ -8,10 +8,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace XWidget.Telepathy.TestWeb2 {
+namespace XWidget.Telepathy.TestWeb3 {
     public class Program {
         public static void Main(string[] args) {
-            Console.Title = "WEB2: 中間節點";
+            Console.Title = "WEB3: 分支節點";
             CreateWebHostBuilder(args).Build().Run();
         }
 

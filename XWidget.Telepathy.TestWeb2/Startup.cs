@@ -12,6 +12,9 @@ namespace XWidget.Telepathy.TestWeb2 {
         // This method gets called by the runtime. Use this method to add services to the container.
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services) {
+            RouterHub<string>.Id = Guid.Parse("00000000-0000-0000-0000-000000000002");
+
+
             services.AddSignalR();
             services.AddTelepathy<string>("http://localhost:5000");
             RouterHub<string>.OnReceive += (object sender, Package<string> e) => {
@@ -30,7 +33,7 @@ namespace XWidget.Telepathy.TestWeb2 {
             app.Use(async (context, next) => {
                 if (context.Request.Path == "/test") {
                     await RouterHub<string>.SendAsync(new Package<string>() {
-                        Payload = "TEST MESSAGE! FROM WEB2"
+                        Payload = "WEB2的廣播"
                     });
                 }
                 if (context.Request.Path == "/test2") {
